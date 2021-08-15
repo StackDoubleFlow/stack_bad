@@ -1,12 +1,12 @@
-use crate::error::{Result, Error};
+use crate::error::{Error, Result};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum TokenData {
     Stack([u32; 5]),
     Bad([u32; 3]),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Token {
     pub line: usize,
     pub col: usize,
@@ -22,14 +22,15 @@ impl Token {
     }
 }
 
+#[derive(Debug)]
 pub struct TokenPair {
     pub line: usize,
     pub col: usize,
-    pub data: [u32; 8]
+    pub data: [u32; 8],
 }
 
 impl TokenPair {
-    fn new(stack: Token, bad: Token) -> Result<TokenPair> {
+    pub fn new(stack: Token, bad: Token) -> Result<TokenPair> {
         let mut data = [0; 8];
 
         match stack.data {
@@ -40,7 +41,7 @@ impl TokenPair {
                 data[3] = d[3];
                 data[4] = d[4];
             }
-            _ => return Err(stack.error())
+            _ => return Err(stack.error()),
         }
 
         match bad.data {
@@ -49,7 +50,7 @@ impl TokenPair {
                 data[6] = d[1];
                 data[7] = d[2];
             }
-            _ => return Err(bad.error())
+            _ => return Err(bad.error()),
         }
 
         Ok(TokenPair {
@@ -57,5 +58,12 @@ impl TokenPair {
             col: stack.col,
             data,
         })
+    }
+
+    pub fn error(&self) -> Error {
+        Error {
+            line: self.line,
+            col: self.col,
+        }
     }
 }

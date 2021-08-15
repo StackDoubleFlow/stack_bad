@@ -1,5 +1,5 @@
+use crate::error::{Error, Result};
 use crate::token::{Token, TokenData};
-use crate::error::{Result, Error};
 use std::iter::Peekable;
 use std::str::Chars;
 
@@ -43,7 +43,7 @@ impl<'a> Lexer<'a> {
                             'c' => data[3] += 1,
                             'k' => data[4] += 1,
                             ' ' | '\n' if prev_ch == 'k' => break,
-                            _ => return Err(self.error())
+                            _ => return Err(self.error()),
                         }
                         prev_ch = ch;
                     }
@@ -64,7 +64,7 @@ impl<'a> Lexer<'a> {
                             'a' => data[1] += 1,
                             'd' => data[2] += 1,
                             ' ' | '\n' if prev_ch == 'd' => break,
-                            _ => return Err(self.error())
+                            _ => return Err(self.error()),
                         }
                         prev_ch = ch;
                     }
@@ -74,7 +74,7 @@ impl<'a> Lexer<'a> {
                     self.col = 1;
                     self.line += 1;
                 }
-                _ => return Err(self.error())
+                _ => return Err(self.error()),
             }
         }
     }
