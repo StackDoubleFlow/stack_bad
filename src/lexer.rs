@@ -42,7 +42,12 @@ impl<'a> Lexer<'a> {
                             'a' => data[2] += 1,
                             'c' => data[3] += 1,
                             'k' => data[4] += 1,
-                            ' ' | '\n' if prev_ch == 'k' => break,
+                            ' ' if prev_ch == 'k' => break,
+                            '\n' if prev_ch == 'k' => {
+                                self.col = 1;
+                                self.line += 1;
+                                break;
+                            },
                             _ => return Err(self.error()),
                         }
                         prev_ch = ch;
@@ -63,17 +68,28 @@ impl<'a> Lexer<'a> {
                             'b' => data[0] += 1,
                             'a' => data[1] += 1,
                             'd' => data[2] += 1,
-                            ' ' | '\n' if prev_ch == 'd' => break,
+                            ' ' if prev_ch == 'd' => break,
+                            '\n' if prev_ch == 'd' => {
+                                self.col = 1;
+                                self.line += 1;
+                                break;
+                            },
                             _ => return Err(self.error()),
                         }
                         prev_ch = ch;
                     }
                     self.push_token(col, TokenData::Bad(data));
                 }
+                '#' => {
+                    while self.next()? != '\n' {}
+                    self.col = 1;
+                    self.line += 1;
+                }
                 '\n' => {
                     self.col = 1;
                     self.line += 1;
                 }
+                ' ' => {},
                 _ => return Err(self.error()),
             }
         }

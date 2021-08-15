@@ -7,3 +7,5 @@ edition = "2018"
 
 [dependencies]
 clap = "3.0.0-beta.4"
+inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm12-0"] }
+anyhow = "1.0"

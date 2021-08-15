@@ -3,6 +3,7 @@ mod error;
 mod lexer;
 mod parser;
 mod token;
+mod codegen;
 
 use clap::{AppSettings, Clap};
 use error::Result;
@@ -32,6 +33,7 @@ fn compile(src: &str) -> Result<()> {
         [0, 0, 0, 0, 0, 0, 0, 0] => {}
         _ => return Err(magic.error()),
     }
+    dbg!(&pairs);
     let ast = Parser::new(pairs).parse()?;
     dbg!(ast);
     Ok(())

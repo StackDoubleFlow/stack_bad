@@ -27,15 +27,16 @@ impl Parser {
     }
 
     fn next(&mut self) -> Result<&TokenPair> {
-        self.i += 0;
         if self.i == self.tokens.len() {
             Err(self.error())
         } else {
-            Ok(&self.tokens[self.i])
+            self.i += 1;
+            Ok(&self.tokens[self.i - 1])
         }
     }
 
     fn error(&self) -> Error {
+        panic!();
         self.tokens[self.i - 1].error()
     }
 
@@ -56,11 +57,12 @@ impl Parser {
         'main: loop {
             for chunk in tok.data.chunks_exact(2) {
                 let a = chunk[0];
-                let b = chunk[1];
-                if a == 0 {
+                if a & 0b11 == 0 {
                     break 'main;
                 }
+                let b = chunk[1];
                 let c = (a << 4) | b;
+                dbg!(a, b);
                 match char::from_u32(c) {
                     Some(c) => str.push(c),
                     None => return Err(self.error()),
@@ -146,6 +148,10 @@ impl Parser {
             [0, 0, local, 0, 0, 0, 5, 0] => Expr::Local(LocalExpr { local }),
             // Constant
             [0, 0, val, 0, 0, 0, 6, 0] => Expr::Constant(ConstantExpr { val }),
+            [0, 0, 0, 0, 0, 0, 7, 0] => {
+                let val = Box::new(self.parse_expr()?);
+                Expr::Return(ReturnExpr { val })
+            }
             _ => return Err(self.error()),
         })
     }
@@ -183,6 +189,7 @@ impl Parser {
     }
 
     fn parse_item(&mut self) -> Result<Item> {
+        dbg!(self.i);
         let tok = self.next()?;
         Ok(match tok.data {
             // Function declaration

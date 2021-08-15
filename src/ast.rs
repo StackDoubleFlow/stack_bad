@@ -4,6 +4,7 @@ pub enum Type {
     I16,
     I32,
     I64,
+    Unit,
 }
 
 impl Type {
@@ -14,6 +15,7 @@ impl Type {
             1 => I16,
             2 => I32,
             3 => I64,
+            4 => Unit,
             _ => return None,
         })
     }
@@ -102,6 +104,11 @@ pub struct ConstantExpr {
 }
 
 #[derive(Debug)]
+pub struct ReturnExpr {
+    pub val: Box<Expr>,
+}
+
+#[derive(Debug)]
 pub enum Expr {
     Binary(BinaryExpr),
     Unary(UnaryExpr),
@@ -110,6 +117,7 @@ pub enum Expr {
     Assignment(AssignmentExpr),
     Local(LocalExpr),
     Constant(ConstantExpr),
+    Return(ReturnExpr),
 }
 
 #[derive(Debug)]
