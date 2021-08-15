@@ -5,5 +5,6 @@
 ```bash
 stack_bad examples/stack_bad.sb
 # Invoke the linker
-gcc stack_bad.o -o stack_bad
+gcc examples/stack_bad.o -o stack_bad
+./stack_bad
 ```

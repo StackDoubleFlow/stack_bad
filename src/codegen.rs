@@ -2,7 +2,9 @@ use crate::ast::{self};
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::{Linkage, Module};
-use inkwell::targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine};
+use inkwell::targets::{
+    CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine,
+};
 use inkwell::types::{BasicTypeEnum, IntType};
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::{AddressSpace, OptimizationLevel};
@@ -53,16 +55,20 @@ impl<'ctx> Codegen<'ctx> {
         let reloc = RelocMode::Default;
         let model = CodeModel::Default;
         let opt = OptimizationLevel::Default;
-        let target_machine = target.create_target_machine(
-            &triple,
-            cpu.to_str().unwrap(),
-            features.to_str().unwrap(),
-            opt,
-            reloc,
-            model,
-        ).unwrap();
+        let target_machine = target
+            .create_target_machine(
+                &triple,
+                cpu.to_str().unwrap(),
+                features.to_str().unwrap(),
+                opt,
+                reloc,
+                model,
+            )
+            .unwrap();
 
-        target_machine.write_to_file(&self.module, FileType::Object, path).unwrap();
+        target_machine
+            .write_to_file(&self.module, FileType::Object, path)
+            .unwrap();
     }
 
     fn decl_function(&self, decl: ast::FunctionDeclItem) {

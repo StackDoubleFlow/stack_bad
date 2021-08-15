@@ -56,10 +56,10 @@ impl Parser {
         'main: loop {
             for chunk in tok.data.chunks_exact(2) {
                 let a = chunk[0];
-                if a & 0b11 == 0 {
+                let b = chunk[1];
+                if a == 0 && b == 0 {
                     break 'main;
                 }
-                let b = chunk[1];
                 let c = (a << 4) | b;
                 match char::from_u32(c) {
                     Some(c) => str.push(c),
