@@ -7,6 +7,7 @@ mod token;
 use clap::{AppSettings, Clap};
 use error::Result;
 use lexer::Lexer;
+use parser::Parser;
 use std::fs;
 use token::TokenPair;
 
@@ -25,7 +26,14 @@ fn compile(src: &str) -> Result<()> {
         .map(|ts| (ts[0].clone(), ts[1].clone()))
         .map(|(s, b)| TokenPair::new(s, b))
         .collect();
-    dbg!(pairs?);
+    let mut pairs = pairs?;
+    let magic = pairs.remove(0);
+    match magic.data {
+        [0, 0, 0, 0, 0, 0, 0, 0] => {}
+        _ => return Err(magic.error()),
+    }
+    let ast = Parser::new(pairs).parse()?;
+    dbg!(ast);
     Ok(())
 }
 

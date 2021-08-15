@@ -35,20 +35,20 @@ impl TokenPair {
 
         match stack.data {
             TokenData::Stack(d) => {
-                data[0] = d[0];
-                data[1] = d[1];
-                data[2] = d[2];
-                data[3] = d[3];
-                data[4] = d[4];
+                data[0] = d[0] - 1;
+                data[1] = d[1] - 1;
+                data[2] = d[2] - 1;
+                data[3] = d[3] - 1;
+                data[4] = d[4] - 1;
             }
             _ => return Err(stack.error()),
         }
 
         match bad.data {
             TokenData::Bad(d) => {
-                data[5] = d[0];
-                data[6] = d[1];
-                data[7] = d[2];
+                data[5] = d[0] - 1;
+                data[6] = d[1] - 1;
+                data[7] = d[2] - 1;
             }
             _ => return Err(bad.error()),
         }
