@@ -1,24 +1,7 @@
 use crate::token::{Token, TokenData};
-use std::error::Error;
-use std::fmt;
+use crate::error::{Result, Error};
 use std::iter::Peekable;
 use std::str::Chars;
-
-#[derive(Debug)]
-struct LexerError {
-    line: usize,
-    col: usize,
-}
-
-impl fmt::Display for LexerError {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "stack bad")
-    }
-}
-
-impl Error for LexerError {}
-
-type Result<T> = std::result::Result<T, LexerError>;
 
 pub struct Lexer<'a> {
     tokens: Vec<Token>,
@@ -37,28 +20,76 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn lex(&mut self) -> Result<()> {
+    pub fn lex(mut self) -> Result<Vec<Token>> {
         loop {
             if self.peek_next().is_none() {
-                return Ok(());
+                return Ok(self.tokens);
             }
             let ch = self.next()?;
+
             self.col += 1;
+            match ch {
+                's' => {
+                    let col = self.col;
+                    let mut data = [1, 0, 0, 0, 0];
+                    let mut prev_ch = 's';
+                    loop {
+                        let ch = self.next()?;
+                        self.col += 1;
+                        match ch {
+                            's' => data[0] += 1,
+                            't' => data[1] += 1,
+                            'a' => data[2] += 1,
+                            'c' => data[3] += 1,
+                            'k' => data[4] += 1,
+                            ' ' | '\n' if prev_ch == 'k' => break,
+                            _ => return Err(self.error())
+                        }
+                        prev_ch = ch;
+                    }
+                    self.push_token(col, TokenData::Stack(data));
+                }
+                'b' => {
+                    let col = self.col;
+                    let mut data = [1, 0, 0];
+                    let mut prev_ch = 'b';
+                    loop {
+                        if self.peek_next().is_none() && prev_ch == 'd' {
+                            break;
+                        }
+                        let ch = self.next()?;
+                        self.col += 1;
+                        match ch {
+                            'b' => data[0] += 1,
+                            'a' => data[1] += 1,
+                            'd' => data[2] += 1,
+                            ' ' | '\n' if prev_ch == 'd' => break,
+                            _ => return Err(self.error())
+                        }
+                        prev_ch = ch;
+                    }
+                    self.push_token(col, TokenData::Bad(data));
+                }
+                '\n' => {
+                    self.col = 1;
+                    self.line += 1;
+                }
+                _ => return Err(self.error())
+            }
         }
-        Ok(())
     }
 
-    fn error(&self) -> LexerError {
-        LexerError {
+    fn error(&self) -> Error {
+        Error {
             line: self.line,
             col: self.col,
         }
     }
 
-    fn push_token(&mut self, td: TokenData) {
+    fn push_token(&mut self, col: usize, td: TokenData) {
         self.tokens.push(Token {
             line: self.line,
-            col: self.col,
+            col,
             data: td,
         });
     }
