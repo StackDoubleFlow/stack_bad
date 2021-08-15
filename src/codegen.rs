@@ -159,10 +159,7 @@ impl<'ctx> Codegen<'ctx> {
                     ast::UnaryOp::Deref => {
                         let ptr_type = self.context.i32_type().ptr_type(AddressSpace::Generic);
                         let ptr = self.builder.build_int_to_ptr(a, ptr_type, "");
-                        match self.builder.build_load(ptr, "") {
-                            BasicValueEnum::IntValue(val) => val,
-                            _ => panic!("stack bad"),
-                        }
+                        self.builder.build_load(ptr, "").into_int_value()
                     }
                     ast::UnaryOp::Not => self.builder.build_not(a, ""),
                 }
@@ -180,10 +177,7 @@ impl<'ctx> Codegen<'ctx> {
                     .try_as_basic_value()
                     .left()
                     .unwrap();
-                match val {
-                    BasicValueEnum::IntValue(val) => val,
-                    _ => panic!("stack bad"),
-                }
+                val.into_int_value()
             }
             ast::Expr::Block(expr) => {
                 for expr in expr.exprs {
@@ -197,13 +191,9 @@ impl<'ctx> Codegen<'ctx> {
                     .build_store(self.cur_vars[expr.local as usize], val);
                 self.context.i64_type().const_int(0, false)
             }
-            ast::Expr::Local(expr) => match self
+            ast::Expr::Local(expr) => self
                 .builder
-                .build_load(self.cur_vars[expr.local as usize], "")
-            {
-                BasicValueEnum::IntValue(val) => val,
-                _ => panic!("stack bad"),
-            },
+                .build_load(self.cur_vars[expr.local as usize], "").into_int_value(),
             ast::Expr::Constant(expr) => {
                 let ty = self.get_type_from_type(expr.ty);
                 ty.const_int(expr.val as u64, false)
@@ -212,6 +202,16 @@ impl<'ctx> Codegen<'ctx> {
                 let val = self.build_expr(*expr.val);
                 self.builder.build_return(Some(&val));
                 self.context.i64_type().const_int(0, false)
+            }
+            ast::Expr::StringLit(expr) => {
+                let elem_type = self.context.i8_type();
+                let ty = elem_type.array_type(expr.str.len() as u32);
+                let global = self.module.add_global(ty, Some(AddressSpace::Const), "");
+                let items: Vec<_> = expr.str.bytes().map(|b| elem_type.const_int(b as u64, false)).collect();
+                let val = elem_type.const_array(&items);
+                global.set_initializer(&val);
+                let ptr = global.as_pointer_value();
+                self.builder.build_ptr_to_int(ptr, self.context.i64_type(), "")
             }
         }
     }

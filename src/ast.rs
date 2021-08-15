@@ -110,6 +110,11 @@ pub struct ReturnExpr {
 }
 
 #[derive(Debug)]
+pub struct StringLitExpr {
+    pub str: String,
+}
+
+#[derive(Debug)]
 pub enum Expr {
     Binary(BinaryExpr),
     Unary(UnaryExpr),
@@ -119,6 +124,7 @@ pub enum Expr {
     Local(LocalExpr),
     Constant(ConstantExpr),
     Return(ReturnExpr),
+    StringLit(StringLitExpr),
 }
 
 #[derive(Debug)]

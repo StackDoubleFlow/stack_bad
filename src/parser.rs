@@ -151,9 +151,15 @@ impl Parser {
                 };
                 Expr::Constant(ConstantExpr { ty, val })
             }
+            // Return
             [0, 0, 0, 0, 0, 0, 7, 0] => {
                 let val = Box::new(self.parse_expr()?);
                 Expr::Return(ReturnExpr { val })
+            }
+            // String literal
+            [0, 0, 0, 0, 0, 0, 8, 0] => {
+                let str = self.parse_string()?;
+                Expr::StringLit(StringLitExpr { str })
             }
             _ => return Err(self.error()),
         })

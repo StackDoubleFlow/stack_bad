@@ -39,7 +39,7 @@ fn compile(src: &str, output_path: &str) -> Result<()> {
         _ => return Err(magic.error()),
     }
     let ast = Parser::new(pairs).parse()?;
-    dbg!(&ast);
+    // dbg!(&ast);
     let path = Path::new(output_path);
     Codegen::compile(ast, path);
     Ok(())
