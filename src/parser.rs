@@ -114,7 +114,8 @@ impl Parser {
                 let name = self.parse_string()?;
                 let decl = self.find_decl(&name)?;
                 let params_len = decl.params.len();
-                let params: Result<Vec<Expr>> = (0..params_len).map(|_| self.parse_expr()).collect();
+                let params: Result<Vec<Expr>> =
+                    (0..params_len).map(|_| self.parse_expr()).collect();
                 Expr::Invoke(InvokeExpr {
                     func_name: name,
                     params: params?,
@@ -135,9 +136,7 @@ impl Parser {
                     exprs.push(self.parse_expr()?);
                 }
 
-                Expr::Block(BlockExpr {
-                    exprs
-                })
+                Expr::Block(BlockExpr { exprs })
             }
             // Assignment
             [0, 0, local, 0, 0, 0, 4, 0] => {

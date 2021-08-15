@@ -1,9 +1,9 @@
 mod ast;
+mod codegen;
 mod error;
 mod lexer;
 mod parser;
 mod token;
-mod codegen;
 
 use clap::{AppSettings, Clap};
 use error::Result;

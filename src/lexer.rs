@@ -47,7 +47,7 @@ impl<'a> Lexer<'a> {
                                 self.col = 1;
                                 self.line += 1;
                                 break;
-                            },
+                            }
                             _ => return Err(self.error()),
                         }
                         prev_ch = ch;
@@ -73,7 +73,7 @@ impl<'a> Lexer<'a> {
                                 self.col = 1;
                                 self.line += 1;
                                 break;
-                            },
+                            }
                             _ => return Err(self.error()),
                         }
                         prev_ch = ch;
@@ -89,7 +89,7 @@ impl<'a> Lexer<'a> {
                     self.col = 1;
                     self.line += 1;
                 }
-                ' ' => {},
+                ' ' => {}
                 _ => return Err(self.error()),
             }
         }
