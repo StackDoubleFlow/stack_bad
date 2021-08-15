@@ -36,7 +36,6 @@ impl Parser {
     }
 
     fn error(&self) -> Error {
-        panic!();
         self.tokens[self.i - 1].error()
     }
 
@@ -62,7 +61,6 @@ impl Parser {
                 }
                 let b = chunk[1];
                 let c = (a << 4) | b;
-                dbg!(a, b);
                 match char::from_u32(c) {
                     Some(c) => str.push(c),
                     None => return Err(self.error()),
@@ -146,7 +144,13 @@ impl Parser {
             // Local
             [0, 0, local, 0, 0, 0, 5, 0] => Expr::Local(LocalExpr { local }),
             // Constant
-            [0, 0, val, 0, 0, 0, 6, 0] => Expr::Constant(ConstantExpr { val }),
+            [0, 0, val, 0, 0, type_id, 6, 0] => {
+                let ty = match Type::from_id(type_id) {
+                    Some(ty) => ty,
+                    None => return Err(self.error()),
+                };
+                Expr::Constant(ConstantExpr { ty, val })
+            }
             [0, 0, 0, 0, 0, 0, 7, 0] => {
                 let val = Box::new(self.parse_expr()?);
                 Expr::Return(ReturnExpr { val })
@@ -188,7 +192,6 @@ impl Parser {
     }
 
     fn parse_item(&mut self) -> Result<Item> {
-        dbg!(self.i);
         let tok = self.next()?;
         Ok(match tok.data {
             // Function declaration

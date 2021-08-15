@@ -6,10 +6,11 @@ mod parser;
 mod token;
 
 use clap::{AppSettings, Clap};
+use codegen::Codegen;
 use error::Result;
 use lexer::Lexer;
 use parser::Parser;
-use std::fs;
+use std::{fs, path::Path};
 use token::TokenPair;
 
 #[derive(Clap)]
@@ -33,9 +34,10 @@ fn compile(src: &str) -> Result<()> {
         [0, 0, 0, 0, 0, 0, 0, 0] => {}
         _ => return Err(magic.error()),
     }
-    dbg!(&pairs);
     let ast = Parser::new(pairs).parse()?;
-    dbg!(ast);
+    // dbg!(&ast);
+    let path = Path::new("stack_bad.o");
+    Codegen::compile(ast, path);
     Ok(())
 }
 

@@ -100,6 +100,7 @@ pub struct LocalExpr {
 
 #[derive(Debug)]
 pub struct ConstantExpr {
+    pub ty: Type,
     pub val: u32,
 }
 

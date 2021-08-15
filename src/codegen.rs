@@ -2,11 +2,13 @@ use crate::ast::{self};
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::{Linkage, Module};
-use inkwell::types::IntType;
-use inkwell::values::{BasicValueEnum, IntValue};
-use inkwell::AddressSpace;
+use inkwell::targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine};
+use inkwell::types::{BasicTypeEnum, IntType};
+use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
+use inkwell::{AddressSpace, OptimizationLevel};
+use std::path::Path;
 
-struct Codegen<'ctx> {
+pub struct Codegen<'ctx> {
     context: &'ctx Context,
     module: Module<'ctx>,
     builder: Builder<'ctx>,
@@ -16,7 +18,7 @@ struct Codegen<'ctx> {
 }
 
 impl<'ctx> Codegen<'ctx> {
-    pub fn compile(ast: Vec<ast::Item>) {
+    pub fn compile(ast: Vec<ast::Item>, output_path: &Path) {
         let context = Context::create();
         let module = context.create_module("stack_bad");
         let mut codegen = Codegen {
@@ -34,21 +36,52 @@ impl<'ctx> Codegen<'ctx> {
                     codegen.decl_function(decl);
                 }
                 ast::Item::FunctionDef(def) => {
-
+                    codegen.define_function(def);
                 }
             }
         }
+
+        codegen.write_object(output_path);
+    }
+
+    fn write_object(&self, path: &Path) {
+        Target::initialize_x86(&InitializationConfig::default());
+        let triple = TargetMachine::get_default_triple();
+        let target = Target::from_triple(&triple).unwrap();
+        let cpu = TargetMachine::get_host_cpu_name();
+        let features = TargetMachine::get_host_cpu_features();
+        let reloc = RelocMode::Default;
+        let model = CodeModel::Default;
+        let opt = OptimizationLevel::Default;
+        let target_machine = target.create_target_machine(
+            &triple,
+            cpu.to_str().unwrap(),
+            features.to_str().unwrap(),
+            opt,
+            reloc,
+            model,
+        ).unwrap();
+
+        target_machine.write_to_file(&self.module, FileType::Object, path).unwrap();
     }
 
     fn decl_function(&self, decl: ast::FunctionDeclItem) {
         let ret_type = self.get_type_from_type(decl.return_ty);
-        let param_types: Vec<IntType> = decl.params.into_iter().map(|p| self.get_type_from_type(p)).collect();
+        let param_types: Vec<BasicTypeEnum> = decl
+            .params
+            .into_iter()
+            .map(|p| BasicTypeEnum::IntType(self.get_type_from_type(p)))
+            .collect();
 
         let fn_type = ret_type.fn_type(&param_types, false);
-        self.module.add_function(&decl.name, fn_type, Some(match decl.linkage {
-            ast::Linkage::External => Linkage::External,
-            ast::Linkage::Internal => Linkage::Internal,
-        }));
+        self.module.add_function(
+            &decl.name,
+            fn_type,
+            Some(match decl.linkage {
+                ast::Linkage::External => Linkage::External,
+                ast::Linkage::Internal => Linkage::Internal,
+            }),
+        );
     }
 
     fn define_function(&mut self, def: ast::FunctionDefItem) {
@@ -65,17 +98,18 @@ impl<'ctx> Codegen<'ctx> {
         }
 
         for local in def.locals {
-            let alloca = self.builder.build_alloca(self.get_type_from_type(local), "");
+            let alloca = self
+                .builder
+                .build_alloca(self.get_type_from_type(local), "");
             self.cur_vars.push(alloca);
         }
 
         self.build_expr(def.code);
 
         if func_val.verify(true) {
-
         } else {
             unsafe {
-                function.delete();
+                func_val.delete();
             }
 
             panic!("stack bad");
@@ -85,12 +119,12 @@ impl<'ctx> Codegen<'ctx> {
         self.cur_vars.clear();
     }
 
-    fn get_type_from_type(&self, ty: ast::Type) -> IntType {
+    fn get_type_from_type(&self, ty: ast::Type) -> IntType<'ctx> {
         match ty {
             ast::Type::I8 => self.context.i8_type(),
-            ast::Type::I16 => self.context.i8_type(),
-            ast::Type::I32 => self.context.i8_type(),
-            ast::Type::I64 => self.context.i8_type(),
+            ast::Type::I16 => self.context.i16_type(),
+            ast::Type::I32 => self.context.i32_type(),
+            ast::Type::I64 => self.context.i64_type(),
             _ => panic!(),
         }
     }
@@ -153,11 +187,21 @@ impl<'ctx> Codegen<'ctx> {
             }
             ast::Expr::Assignment(expr) => {
                 let val = self.build_expr(*expr.val);
-                self.builder.build_store(self.cur_vars[expr.local], val);
+                self.builder
+                    .build_store(self.cur_vars[expr.local as usize], val);
                 self.context.i64_type().const_int(0, false)
             }
-            ast::Expr::Local(expr) => self.builder.build_load(self.cur_vars[expr.local]),
-            ast::Expr::Constant(expr) => self.context.i64_type().const_int(expr.val as u64, false),
+            ast::Expr::Local(expr) => match self
+                .builder
+                .build_load(self.cur_vars[expr.local as usize], "")
+            {
+                BasicValueEnum::IntValue(val) => val,
+                _ => panic!("stack bad"),
+            },
+            ast::Expr::Constant(expr) => {
+                let ty = self.get_type_from_type(expr.ty);
+                ty.const_int(expr.val as u64, false)
+            }
             ast::Expr::Return(expr) => {
                 let val = self.build_expr(*expr.val);
                 self.builder.build_return(Some(&val));
