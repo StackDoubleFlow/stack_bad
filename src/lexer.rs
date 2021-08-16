@@ -34,24 +34,24 @@ impl<'a> Lexer<'a> {
                     let mut data = [1, 0, 0, 0, 0];
                     let mut prev_ch = 's';
                     loop {
+                        match self.peek_next() {
+                            Some(' ' | '\n') if prev_ch == 'k' => break,
+                            None => return Err(self.error()),
+                            _ => {}
+                        }
                         let ch = self.next()?;
-                        self.col += 1;
                         match ch {
                             's' => data[0] += 1,
                             't' => data[1] += 1,
                             'a' => data[2] += 1,
                             'c' => data[3] += 1,
                             'k' => data[4] += 1,
-                            ' ' if prev_ch == 'k' => break,
-                            '\n' if prev_ch == 'k' => {
-                                self.col = 1;
-                                self.line += 1;
-                                break;
-                            }
                             _ => return Err(self.error()),
                         }
                         prev_ch = ch;
                     }
+                    let sum = data.iter().sum::<u32>() - 1;
+                    self.col += sum as usize;
                     self.push_token(col, TokenData::Stack(data));
                 }
                 'b' => {
@@ -59,34 +59,31 @@ impl<'a> Lexer<'a> {
                     let mut data = [1, 0, 0];
                     let mut prev_ch = 'b';
                     loop {
-                        if self.peek_next().is_none() && prev_ch == 'd' {
-                            break;
+                        match self.peek_next() {
+                            Some(' ' | '\n') | None if prev_ch == 'd' => break,
+                            _ => {}
                         }
                         let ch = self.next()?;
-                        self.col += 1;
                         match ch {
                             'b' => data[0] += 1,
                             'a' => data[1] += 1,
                             'd' => data[2] += 1,
-                            ' ' if prev_ch == 'd' => break,
-                            '\n' if prev_ch == 'd' => {
-                                self.col = 1;
-                                self.line += 1;
-                                break;
-                            }
                             _ => return Err(self.error()),
                         }
                         prev_ch = ch;
                     }
+                    let sum = data.iter().sum::<u32>() - 1;
+                    self.col += sum as usize;
                     self.push_token(col, TokenData::Bad(data));
                 }
                 '#' => {
-                    while self.next()? != '\n' {}
-                    self.col = 1;
-                    self.line += 1;
+                    while matches!(self.peek_next(), Some(c) if c != '\n') {
+                        self.next()?;
+                        self.col += 1;
+                    }
                 }
                 '\n' => {
-                    self.col = 1;
+                    self.col = 0;
                     self.line += 1;
                 }
                 ' ' => {}
