@@ -41,11 +41,11 @@ impl<'a> Lexer<'a> {
                         }
                         let ch = self.next()?;
                         match ch {
-                            's' => data[0] += 1,
-                            't' => data[1] += 1,
-                            'a' => data[2] += 1,
-                            'c' => data[3] += 1,
-                            'k' => data[4] += 1,
+                            's' if matches!(prev_ch, 's') => data[0] += 1,
+                            't' if matches!(prev_ch, 's' | 't') => data[1] += 1,
+                            'a' if matches!(prev_ch, 't' | 'a') => data[2] += 1,
+                            'c' if matches!(prev_ch, 'a' | 'c') => data[3] += 1,
+                            'k' if matches!(prev_ch, 'c' | 'k') => data[4] += 1,
                             _ => return Err(self.error()),
                         }
                         prev_ch = ch;
@@ -65,9 +65,9 @@ impl<'a> Lexer<'a> {
                         }
                         let ch = self.next()?;
                         match ch {
-                            'b' => data[0] += 1,
-                            'a' => data[1] += 1,
-                            'd' => data[2] += 1,
+                            'b' if matches!(prev_ch, 'b') => data[0] += 1,
+                            'a' if matches!(prev_ch, 'b' | 'a') => data[1] += 1,
+                            'd' if matches!(prev_ch, 'a' | 'd') => data[2] += 1,
                             _ => return Err(self.error()),
                         }
                         prev_ch = ch;
