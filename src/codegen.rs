@@ -5,8 +5,8 @@ use inkwell::module::{Linkage, Module};
 use inkwell::targets::{
     CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine,
 };
-use inkwell::types::{BasicTypeEnum, IntType};
-use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
+use inkwell::types::{BasicMetadataTypeEnum, IntType};
+use inkwell::values::{BasicMetadataValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::{AddressSpace, OptimizationLevel};
 use std::path::Path;
 
@@ -73,10 +73,10 @@ impl<'ctx> Codegen<'ctx> {
 
     fn decl_function(&self, decl: ast::FunctionDeclItem) {
         let ret_type = self.get_type_from_type(decl.return_ty);
-        let param_types: Vec<BasicTypeEnum> = decl
+        let param_types: Vec<BasicMetadataTypeEnum> = decl
             .params
             .into_iter()
-            .map(|p| BasicTypeEnum::IntType(self.get_type_from_type(p)))
+            .map(|p| BasicMetadataTypeEnum::IntType(self.get_type_from_type(p)))
             .collect();
 
         let fn_type = ret_type.fn_type(&param_types, false);
@@ -98,15 +98,16 @@ impl<'ctx> Codegen<'ctx> {
         self.builder.position_at_end(entry);
 
         for arg in func_val.get_param_iter() {
-            let alloca = self.builder.build_alloca(arg.get_type(), "");
-            self.builder.build_store(alloca, arg);
+            let alloca = self.builder.build_alloca(arg.get_type(), "").unwrap();
+            self.builder.build_store(alloca, arg).unwrap();
             self.cur_vars.push(alloca);
         }
 
         for local in def.locals {
             let alloca = self
                 .builder
-                .build_alloca(self.get_type_from_type(local), "");
+                .build_alloca(self.get_type_from_type(local), "")
+                .unwrap();
             self.cur_vars.push(alloca);
         }
 
@@ -152,28 +153,33 @@ impl<'ctx> Codegen<'ctx> {
                     ast::BinaryOp::Lsh => self.builder.build_left_shift(a, b, ""),
                     ast::BinaryOp::Rsh => self.builder.build_right_shift(a, b, true, ""),
                 }
+                .unwrap()
             }
             ast::Expr::Unary(expr) => {
                 let a = self.build_expr(*expr.a);
                 match expr.op {
                     ast::UnaryOp::Deref => {
-                        let ptr_type = self.context.i32_type().ptr_type(AddressSpace::Generic);
-                        let ptr = self.builder.build_int_to_ptr(a, ptr_type, "");
-                        self.builder.build_load(ptr, "").into_int_value()
+                        let ptr_type = self.context.i32_type().ptr_type(Default::default());
+                        let ptr = self.builder.build_int_to_ptr(a, ptr_type, "").unwrap();
+                        self.builder
+                            .build_load(ptr_type, ptr, "")
+                            .unwrap()
+                            .into_int_value()
                     }
-                    ast::UnaryOp::Not => self.builder.build_not(a, ""),
+                    ast::UnaryOp::Not => self.builder.build_not(a, "").unwrap(),
                 }
             }
             ast::Expr::Invoke(expr) => {
                 let fn_val = self.module.get_function(&expr.func_name).unwrap();
-                let args: Vec<BasicValueEnum> = expr
+                let args: Vec<BasicMetadataValueEnum> = expr
                     .params
                     .into_iter()
-                    .map(|p| BasicValueEnum::IntValue(self.build_expr(p)))
+                    .map(|p| BasicMetadataValueEnum::IntValue(self.build_expr(p)))
                     .collect();
                 let val = self
                     .builder
                     .build_call(fn_val, &args, "")
+                    .unwrap()
                     .try_as_basic_value()
                     .left()
                     .unwrap();
@@ -188,30 +194,42 @@ impl<'ctx> Codegen<'ctx> {
             ast::Expr::Assignment(expr) => {
                 let val = self.build_expr(*expr.val);
                 self.builder
-                    .build_store(self.cur_vars[expr.local as usize], val);
+                    .build_store(self.cur_vars[expr.local as usize], val)
+                    .unwrap();
                 self.context.i64_type().const_int(0, false)
             }
-            ast::Expr::Local(expr) => self
-                .builder
-                .build_load(self.cur_vars[expr.local as usize], "").into_int_value(),
+            ast::Expr::Local(expr) => {
+                let pointer_val = self.cur_vars[expr.local as usize];
+                self.builder
+                    .build_load(pointer_val.get_type(), pointer_val, "")
+                    .unwrap()
+                    .into_int_value()
+            }
             ast::Expr::Constant(expr) => {
                 let ty = self.get_type_from_type(expr.ty);
                 ty.const_int(expr.val as u64, false)
             }
             ast::Expr::Return(expr) => {
                 let val = self.build_expr(*expr.val);
-                self.builder.build_return(Some(&val));
+                self.builder.build_return(Some(&val)).unwrap();
                 self.context.i64_type().const_int(0, false)
             }
             ast::Expr::StringLit(expr) => {
                 let elem_type = self.context.i8_type();
                 let ty = elem_type.array_type(expr.str.len() as u32);
-                let global = self.module.add_global(ty, Some(AddressSpace::Const), "");
-                let items: Vec<_> = expr.str.bytes().map(|b| elem_type.const_int(b as u64, false)).collect();
+                // const address space
+                let global = self.module.add_global(ty, Some(AddressSpace::from(4)), "");
+                let items: Vec<_> = expr
+                    .str
+                    .bytes()
+                    .map(|b| elem_type.const_int(b as u64, false))
+                    .collect();
                 let val = elem_type.const_array(&items);
                 global.set_initializer(&val);
                 let ptr = global.as_pointer_value();
-                self.builder.build_ptr_to_int(ptr, self.context.i64_type(), "")
+                self.builder
+                    .build_ptr_to_int(ptr, self.context.i64_type(), "")
+                    .unwrap()
             }
         }
     }

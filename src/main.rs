@@ -1,11 +1,11 @@
 mod ast;
+mod cli;
 mod codegen;
 mod error;
 mod lexer;
 mod parser;
 mod token;
 
-use clap::{AppSettings, Clap};
 use codegen::Codegen;
 use error::Result;
 use lexer::Lexer;
@@ -13,17 +13,6 @@ use parser::Parser;
 use std::fs;
 use std::path::Path;
 use token::TokenPair;
-
-#[derive(Clap)]
-#[clap(version = "0.1", author = "StackDoubleFlow <ojaslandge@gmail.com>")]
-#[clap(setting = AppSettings::ColoredHelp)]
-struct Opts {
-    /// Input source file path.
-    input: String,
-    /// Output object file path.
-    #[clap(short)]
-    output: Option<String>,
-}
 
 fn compile(src: &str, output_path: &str) -> Result<()> {
     let tokens = Lexer::new(src).lex()?;
@@ -46,7 +35,7 @@ fn compile(src: &str, output_path: &str) -> Result<()> {
 }
 
 fn main() {
-    let opts = Opts::parse();
+    let opts = cli::get_opts();
 
     let output_path = opts.output.clone().unwrap_or_else(|| {
         let input_path = Path::new(&opts.input);
